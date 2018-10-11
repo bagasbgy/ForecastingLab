@@ -2,6 +2,8 @@
 #--------------------
 
 # load libs
+if (!require("pacman")) install.packages("pacman")
+
 pacman::p_load(
   DT, forecast, magrittr, shinydashboard,
   sweep, tidyverse, tidyquant, timetk

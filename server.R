@@ -2,6 +2,8 @@
 #--------------------
 
 # load libs
+if (!require("pacman")) install.packages("pacman")
+
 pacman::p_load(
   DT, forecast, magrittr, shinydashboard,
   sweep, tidyverse, tidyquant, timetk
@@ -532,14 +534,14 @@ server <- shinyServer(
         paste("decompositionResult.csv", sep = "")
       },
 
-      content = function(file) {
+      content = function() {
         reactives$decomposed %>%
           mutate_if(
             is.numeric,
             funs(format(round(., 2), nsmall = 2))
           ) %>%
           spread(key = key, value = value) %>%
-          write.csv(file, row.names = FALSE)
+          write_csv()
       }
 
   )
@@ -805,21 +807,21 @@ server <- shinyServer(
 
     )
 
-    # download handler for decomposition result
+    # download handler for forecast result
     output$forecastDownload <- downloadHandler(
 
       filename = function() {
         paste("forecastResult.csv", sep = "")
       },
 
-      content = function(file) {
+      content = function() {
         reactives$forecasted %>%
           mutate_if(
             is.numeric,
             funs(format(round(., 2), nsmall = 2))
           ) %>%
           spread(key = key, value = value) %>%
-          write.csv(file, row.names = FALSE)
+          write_csv()
       }
 
     )
