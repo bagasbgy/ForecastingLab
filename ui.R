@@ -2,12 +2,14 @@
 #--------------------
 
 # load libs
-if (!require("pacman")) install.packages("pacman")
-
-pacman::p_load(
-  DT, forecast, magrittr, shinydashboard,
-  sweep, tidyverse, tidyquant, timetk
-)
+library(DT)
+library(forecast)
+library(magrittr)
+library(shinydashboard)
+library(sweep)
+library(tidyverse)
+library(tidyquant)
+library(timetk)
 
 # load all custom funs
 source("script/funs.R")
@@ -164,8 +166,10 @@ decompMethodSetting <- tabPanel(
 
   # input; set decomposition method
   uiOutput("decompMethodUI"),
+  
+  # input; set data transformation
   uiOutput("decompTransUI"),
-
+  
   width = NULL
 
 )
@@ -181,7 +185,7 @@ decompSeasSetting <- tabPanel(
   # input: set ts frequency
   uiOutput("decompFreqUI"),
 
-  width = NULL
+    width = NULL
 
 )
 
@@ -197,20 +201,6 @@ decompSetting <- tabBox(
   width = NULL
 
 )
-
-# body: decomp - output
-#--------------------
-
-# decomposition result table
-decompTableUI <- box(
-
-  dataTableOutput(outputId = "decompTable"),
-
-  title = NULL,
-  width = NULL
-
-)
-
 
 # body: decomp - full
 #--------------------
@@ -230,15 +220,30 @@ decompBody <- tabItem(
   ),
 
   fixedRow(
-
+    
     column(
+      
       decompSetting,
+      
+      # input: decomposition action button
+      actionButton(inputId = "decompAB", label = "Apply"),
+      
       width = 5
+      
     ),
 
     column(
-      decompTableUI,
-      downloadButton("decompDownload", "Download Result"),
+      
+      uiOutput("decompTableUI"),
+      
+      conditionalPanel(
+        
+        condition = "output.decompTableUI != null",
+        
+        downloadButton("decompDownload", "Download Result")
+        
+      ),
+      
       width = 7
     )
 
@@ -290,32 +295,6 @@ forecastSetting <- tabBox(
 
 )
 
-# body: forecast - output
-#--------------------
-
-# forecast plot
-forecastPlotUI <- box(
-
-  plotOutput(
-    outputId = "forecastPlot",
-    height = "450px"
-  ),
-
-  title = NULL,
-  width = NULL
-
-)
-
-# forecast result table
-forecastTableUI <- box(
-
-  dataTableOutput(outputId = "forecastTable"),
-
-  title = NULL,
-  width = NULL
-
-)
-
 # body: forecast - full
 #--------------------
 
@@ -327,7 +306,7 @@ forecastBody <- tabItem(
   fixedRow(
 
     column(
-      forecastPlotUI,
+      uiOutput("forecastPlotUI"),
       width = 12
     )
 
@@ -336,14 +315,30 @@ forecastBody <- tabItem(
   fixedRow(
 
     column(
+      
       forecastSetting,
+      
+      # input: forecast action button
+      actionButton(inputId = "forecastAB", label = "Apply"),
+      
       width = 5
+      
     ),
 
     column(
-      forecastTableUI,
-      downloadButton("forecastDownload", "Download Result"),
+      
+      uiOutput("forecastTableUI"),
+      
+      conditionalPanel(
+        
+        condition = "output.forecastTableUI != null",
+        
+        downloadButton("forecastDownload", "Download Result")
+        
+      ),
+      
       width = 7
+      
     )
 
   )
