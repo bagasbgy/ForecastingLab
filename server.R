@@ -2,12 +2,14 @@
 #--------------------
 
 # load libs
-if (!require("pacman")) install.packages("pacman")
-
-pacman::p_load(
-  DT, forecast, magrittr, shinydashboard,
-  sweep, tidyverse, tidyquant, timetk
-)
+library(DT)
+library(forecast)
+library(magrittr)
+library(shinydashboard)
+library(sweep)
+library(tidyverse)
+library(tidyquant)
+library(timetk)
 
 # load all custom funs
 source("script/funs.R")
@@ -282,32 +284,34 @@ server <- shinyServer(
       )
 
     })
-
-    # decomposition
-    observe({
-
-      # update frequency input
-      if (!is.null(input$decompFreq1)) {
-        reactives$decompFreq1 <- input$decompFreq1
-      }
-
-      if (!is.null(input$decompFreq2)) {
-        reactives$decompFreq2 <- input$decompFreq2
-      }
-
-      if (!is.null(input$decompFreq3)) {
-        reactives$decompFreq3 <- input$decompFreq3
-      }
-
+    
+    # update decomposition input
+    observeEvent(input$decompAB, {
+      
       # update selected method
-      if (!is.null(input$decompMethod)) {
-        reactives$decompMethod <- input$decompMethod
-      }
+      req(input$decompMethod)
+      reactives$decompMethod <- input$decompMethod
 
       # update selected transformation
-      if (!is.null(input$decompTrans)) {
-        reactives$decompTrans <- input$decompTrans
-      }
+      req(input$decompTrans)
+      reactives$decompTrans <- input$decompTrans
+
+      # update frequency input
+      req(input$decompFreq1)
+      reactives$decompFreq1 <- input$decompFreq1
+      
+      
+      req(input$decompFreq2)
+      reactives$decompFreq2 <- input$decompFreq2
+      
+      
+      req(input$decompFreq3)
+      reactives$decompFreq3 <- input$decompFreq3
+      
+    })
+    
+    # decomposition
+    observeEvent(input$decompAB, {
 
       # define frequency
       reactives$decompFreq <-
@@ -437,53 +441,52 @@ server <- shinyServer(
 
       # store final decomposition result
       reactives$decomposed <- decomposed
-
-    })
-
-    # display plot
-    output$decompPlotUI <- renderUI({
-
-      # names of all components
-      decomposed <- reactives$decomposed
-      comps <- decomposed %>%
-        pull(key) %>% as.factor() %>% levels()
-
-      # full dynamic plot tabs
-      decompPlotTabs <- lapply(
-
-        # generate plot and tab panels
-        comps, function(comp) {
-
-          compTitle <- str_to_title(comp)
-          plotOutputName <- paste0("decomp", compTitle, "Plot")
-
-          # render all component
-          output[[plotOutputName]] <-
-
-            renderPlot({
-
-              reactives$decomposed %>%
-                filter(key == comp) %>%
-                ggplot(aes(x = index, y = value)) +
-                geom_line() +
-                labs(title = "", y = "", x = "") +
-                theme_bw()
-
-            })
-
-          # tab panel
-          tabPanel(
-
-            # display selected output
-            plotOutput(
-              plotOutputName,
-              height = "410px"
-            ),
-
-
-            title =
+      
+      
+      # display plot
+      output$decompPlotUI <- renderUI({
+        
+        # names of all components
+        decomposed <- reactives$decomposed
+        comps <- decomposed %>%
+          pull(key) %>% as.factor() %>% levels()
+        
+        # full dynamic plot tabs
+        decompPlotTabs <- lapply(
+          
+          # generate plot and tab panels
+          comps, function(comp) {
+            
+            compTitle <- str_to_title(comp)
+            plotOutputName <- paste0("decomp", compTitle, "Plot")
+            
+            # render all component
+            output[[plotOutputName]] <-
+              
+              renderPlot({
+                
+                reactives$decomposed %>%
+                  filter(key == comp) %>%
+                  ggplot(aes(x = index, y = value)) +
+                  geom_line() +
+                  labs(title = "", y = "", x = "") +
+                  theme_bw()
+                
+              })
+            
+            # tab panel
+            tabPanel(
+              
+              # display selected output
+              plotOutput(
+                plotOutputName,
+                height = "410px"
+              ),
+              
+              
+              title =
               if (comp == "season")
-                paste("Seasonal Component")
+                  paste("Seasonal Component")
               else if (comp == "season1")
                 paste("First Seasonal Component")
               else if (comp == "season2")
@@ -491,60 +494,76 @@ server <- shinyServer(
               else if (comp == "season3")
                 paste("Third Seasonal Component")
               else paste(compTitle, "Component"),
-
-            width = NULL
-
-          ) %>%
-
+              
+              width = NULL
+              
+            ) %>%
+              
+              return()
+            
+          }
+          
+        )
+        
+        # return dynamic tabs
+        do.call(tabBox, c(decompPlotTabs, width = NA)) %>%
           return()
-
-        }
-
-      )
-
-      # return dynamic tabs
-      do.call(tabBox, c(decompPlotTabs, width = NA)) %>%
-        return()
-
-    })
-
-    # display table
-    output$decompTable <- renderDataTable(
-
-      # decomposition result
-      reactives$decomposed %>%
-        mutate_if(
-          is.numeric,
-          funs(format(round(., 2), nsmall = 2))
-        ) %>%
-        spread(key = key, value = value),
-
-      # data table options
-      options = list(
-        pageLength = 5,
-        lengthMenu = 5
-      )
-
-    )
-
-    # download handler for decomposition result
-    output$decompDownload <- downloadHandler(
-
-      filename = function() {
-        paste("decompositionResult.csv", sep = "")
-      },
-
-      content = function() {
+        
+      })
+      
+      # display table
+      output$decompTable <- renderDataTable(
+        
+        # decomposition result
         reactives$decomposed %>%
           mutate_if(
             is.numeric,
             funs(format(round(., 2), nsmall = 2))
           ) %>%
-          spread(key = key, value = value) %>%
-          write_csv()
-      }
+          spread(key = key, value = value),
+        
+        # data table options
+        options = list(
+          pageLength = 5,
+          lengthMenu = 5
+        )
+        
+      )
 
-  )
+      # render display table UI
+      output$decompTableUI <- renderUI({
+        
+        box(
+          
+          dataTableOutput(outputId = "decompTable"),
+          
+          title = NULL,
+          width = NULL
+          
+        )
+        
+      })
+        
+      # download handler for decomposition result
+      output$decompDownload <- downloadHandler(
+        
+        filename = function() {
+          paste("decompositionResult.csv", sep = "")
+        },
+        
+        content = function(file) {
+          reactives$decomposed %>%
+            mutate_if(
+              is.numeric,
+              funs(format(round(., 2), nsmall = 2))
+            ) %>%
+            spread(key = key, value = value) %>%
+            write_csv(file)
+        }
+
+      )
+
+    }, ignoreInit = TRUE)
 
   # forecast
   #--------------------
@@ -662,53 +681,50 @@ server <- shinyServer(
 
   })
 
-  # decomposition
-  observe({
+  # forecast
+  observeEvent(input$forecastAB, {
 
     # update frequency input
-    if (!is.null(input$forecastFreq1)) {
-      reactives$forecastFreq1 <- input$forecastFreq1
-    }
-
-    if (!is.null(input$forecastFreq2)) {
-      reactives$forecastFreq2 <- input$forecastFreq2
-    }
-
-    if (!is.null(input$forecastFreq3)) {
-      reactives$forecastFreq3 <- input$forecastFreq3
-    }
+    req(input$forecastFreq1)
+    reactives$forecastFreq1 <- input$forecastFreq1
+    
+    req(input$forecastFreq2)
+    reactives$forecastFreq2 <- input$forecastFreq2
+    
+    req(input$forecastFreq3)
+    reactives$forecastFreq3 <- input$forecastFreq3
 
     # update selected method
-    if (!is.null(input$forecastMethod)) {
-      reactives$forecastMethod <- input$forecastMethod
-    }
-
+    req(input$forecastMethod)
+    reactives$forecastMethod <- input$forecastMethod
+    
     # update forecast horizon
-    if (!is.null(input$forecastHorizon)) {
-      reactives$forecastHorizon <- input$forecastHorizon
-    }
-
+    req(input$forecastHorizon)
+    reactives$forecastHorizon <- input$forecastHorizon
+    
     # update selected transformation
-    if (!is.null(input$forecastTrans)) {
-      reactives$forecastTrans <- input$forecastTrans
-    }
+    req(input$forecastTrans)
+    reactives$forecastTrans <- input$forecastTrans
+    
+  })
 
+  # start decomposition #
+  observeEvent(input$forecastAB, {
+    
     # define frequency
     reactives$forecastFreq <-
-
-      if (reactives$forecastFreqN == 1) reactives$forecastFreq1
-
-      else if (reactives$forecastFreqN == 2)
-        c(reactives$forecastFreq1,
-          reactives$forecastFreq1 * reactives$forecastFreq2)
-
-      else if (reactives$forecastFreqN == 3)
-        c(reactives$forecastFreq1,
-          reactives$forecastFreq1 * reactives$forecastFreq2,
-          reactives$forecastFreq1 * reactives$forecastFreq2 *
-          reactives$forecastFreq3)
-
-    # start decomposition #
+      
+    if (reactives$forecastFreqN == 1) reactives$forecastFreq1
+    
+    else if (reactives$forecastFreqN == 2)
+      c(reactives$forecastFreq1,
+        reactives$forecastFreq1 * reactives$forecastFreq2)
+    
+    else if (reactives$forecastFreqN == 3)
+      c(reactives$forecastFreq1,
+        reactives$forecastFreq1 * reactives$forecastFreq2,
+        reactives$forecastFreq1 * reactives$forecastFreq2 *
+        reactives$forecastFreq3)
 
     # create ts object
     if (reactives$forecastFreqN == 1) {
@@ -739,7 +755,7 @@ server <- shinyServer(
 
     # forecast: auto.arima
     else if (reactives$forecastMethod == "auto.arima") {
-      forecasted %<>% ets()
+      forecasted %<>% auto.arima()
     }
 
     # forecast: stlm
@@ -771,11 +787,9 @@ server <- shinyServer(
     # store final forecast result
     reactives$forecasted <- forecasted
 
-    })
-
     # display plot
     output$forecastPlot <- renderPlot({
-
+      
       reactives$forecasted %>%
         ggplot(aes(x = index, y = value, colour = factor(key))) +
         geom_line() +
@@ -785,12 +799,29 @@ server <- shinyServer(
           values = c("black", "blue"),
           guide = FALSE
         )
-
+      
     })
-
+    
+    # display plot UI
+    output$forecastPlotUI <- renderUI({
+    
+      box(
+        
+        plotOutput(
+          outputId = "forecastPlot",
+          height = "450px"
+        ),
+      
+        title = NULL,
+        width = NULL
+        
+      )
+      
+    })
+    
     # display table
     output$forecastTable <- renderDataTable(
-
+      
       # decomposition result
       reactives$forecasted %>%
         mutate_if(
@@ -798,33 +829,48 @@ server <- shinyServer(
           funs(format(round(., 2), nsmall = 2))
         ) %>%
         spread(key = key, value = value),
-
+      
       # data table options
       options = list(
         pageLength = 5,
         lengthMenu = 5
       )
-
+      
     )
+    
+    output$forecastTableUI <- renderUI({
+      
+      box(
+        
+        dataTableOutput(outputId = "forecastTable"),
+        
+        title = NULL,
+        width = NULL
+        
+      )
+      
+    })
 
     # download handler for forecast result
     output$forecastDownload <- downloadHandler(
-
+      
       filename = function() {
         paste("forecastResult.csv", sep = "")
       },
-
-      content = function() {
+      
+      content = function(file) {
         reactives$forecasted %>%
           mutate_if(
             is.numeric,
             funs(format(round(., 2), nsmall = 2))
           ) %>%
           spread(key = key, value = value) %>%
-          write_csv()
+          write_csv(file)
       }
-
+      
     )
+    
+  }, ignoreInit = TRUE)
 
   # end of server
   #--------------------
