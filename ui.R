@@ -23,7 +23,7 @@ header <- dashboardHeader(
   # main title
   title = "Forecasting Lab",
 
-  titleWidth = 300
+  titleWidth = 250
 
 )
 
@@ -74,7 +74,7 @@ sidebar <- dashboardSidebar(
 
   ),
 
-  width = 300
+  width = 250
 
 )
 
@@ -105,7 +105,6 @@ dataCheckSample <- box(
 
   dataTableOutput(outputId = "checkSample"),
 
-  title = NULL,
   width = NULL
 
 )
@@ -113,12 +112,8 @@ dataCheckSample <- box(
 # check plot
 dataCheckPlot <- box(
 
-  plotOutput(
-    outputId = "checkPlot",
-    height = "450px"
-  ),
+  plotOutput(outputId = "checkPlot"),
 
-  title = NULL,
   width = NULL
 
 )
@@ -185,7 +180,7 @@ decompSeasSetting <- tabPanel(
   # input: set ts frequency
   uiOutput("decompFreqUI"),
 
-    width = NULL
+  width = NULL
 
 )
 
