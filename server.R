@@ -14,6 +14,9 @@ library(timetk)
 # load all custom funs
 source("script/funs.R")
 
+# example data
+fnb <- read_csv("data/fnb.csv")
+
 # start server
 #--------------------
 
@@ -24,9 +27,6 @@ server <- shinyServer(
 
     # data
     #--------------------
-
-    # example data
-    fnb <- read_csv("data/fnb.csv")
 
     # initiate reactive values
     reactives <- reactiveValues(
@@ -81,6 +81,7 @@ server <- shinyServer(
 
     })
 
+    # update selected data
     observe({
 
       if (!is.null(input$dataName)) {
@@ -128,7 +129,9 @@ server <- shinyServer(
 
       # update ts variable
       if (!is.null(input$tsVarName)) {
+        
         reactives$tsVarName <- input$tsVarName
+        
       }
 
       reactives$tsVar <-
@@ -140,7 +143,9 @@ server <- shinyServer(
 
       # store ts index
       if (!is.null(input$tsIndexName)) {
+        
         reactives$tsIndexName <- input$tsIndexName
+      
       }
 
       reactives$tsIndex <-
@@ -195,6 +200,36 @@ server <- shinyServer(
 
     reactives$decompMethod <- "classic"
     reactives$decompTrans <- "none"
+    
+    # decomposition method option
+    output$decompMethodUI <- renderUI({
+
+      selectInput(
+        label = h5("Set Decomposition Method:"),
+        inputId = "decompMethod",
+        choices = list(
+          "Classical Decomposition" = "classic",
+          "STL" = "stl"
+        ),
+        selected = "classic"
+      )
+
+    })
+
+    # data transformation option
+    output$decompTransUI <- renderUI({
+
+      selectInput(
+        label = h5("Set Data Transformation Method:"),
+        inputId = "decompTrans",
+        choices = list(
+          "None" = "none",
+          "Natural Log" = "ln"
+        ),
+        selected = "none"
+      )
+
+    })
 
     # number of frequency option
     output$decompFreqNUI <- renderUI({
@@ -202,9 +237,12 @@ server <- shinyServer(
       numericInput(
         label = h5("Set Number of Seasonality:"),
         inputId = "decompFreqN",
-        value = reactives$decompFreqN,
+        value = 1,
         min = 1,
-        max = 3
+        max =
+          if (reactives$decompMethod == "stl") 3
+          else 1
+        
       )
 
     })
@@ -213,7 +251,9 @@ server <- shinyServer(
     observeEvent(input$decompFreqN, {
 
       if (!is.null(input$decompFreqN)) {
+        
         reactives$decompFreqN <- input$decompFreqN
+        
       }
 
     })
@@ -255,58 +295,43 @@ server <- shinyServer(
 
     })
 
-    # decomposition method option
-    output$decompMethodUI <- renderUI({
-
-      selectInput(
-        label = h5("Set Decomposition Method:"),
-        inputId = "decompMethod",
-        choices = list(
-          "Classical Decomposition" = "classic",
-          "STL" = "stl"
-        ),
-        selected = reactives$decompMethod
-      )
-
-    })
-
-    # data transformation option
-    output$decompTransUI <- renderUI({
-
-      selectInput(
-        label = h5("Set Data Transformation Method:"),
-        inputId = "decompTrans",
-        choices = list(
-          "None" = "none",
-          "Natural Log" = "ln"
-        ),
-        selected = reactives$decompTrans
-      )
-
-    })
-    
     # update decomposition input
-    observeEvent(input$decompAB, {
+    observe({
       
       # update selected method
-      req(input$decompMethod)
-      reactives$decompMethod <- input$decompMethod
+      if (!is.null(input$decompMethod)) {
+        
+        reactives$decompMethod <- input$decompMethod
+        
+      }
 
       # update selected transformation
-      req(input$decompTrans)
-      reactives$decompTrans <- input$decompTrans
+      if (!is.null(input$decompTrans)) {
+        
+        reactives$decompTrans <- input$decompTrans
+        
+      }
 
       # update frequency input
-      req(input$decompFreq1)
-      reactives$decompFreq1 <- input$decompFreq1
+      if (!is.null(input$decompFreq1)) {
+        
+        reactives$decompFreq1 <- input$decompFreq1
+      
+      }
       
       
-      req(input$decompFreq2)
-      reactives$decompFreq2 <- input$decompFreq2
+      if (!is.null(input$decompFreq2)) {
+      
+        reactives$decompFreq2 <- input$decompFreq2
+        
+      }
       
       
-      req(input$decompFreq3)
-      reactives$decompFreq3 <- input$decompFreq3
+      if (!is.null(input$decompFreq3)) {
+      
+        reactives$decompFreq3 <- input$decompFreq3
+        
+      }
       
     })
     
@@ -447,8 +472,7 @@ server <- shinyServer(
       output$decompPlotUI <- renderUI({
         
         # names of all components
-        decomposed <- reactives$decomposed
-        comps <- decomposed %>%
+        comps <- reactives$decomposed %>%
           pull(key) %>% as.factor() %>% levels()
         
         # full dynamic plot tabs
@@ -478,10 +502,7 @@ server <- shinyServer(
             tabPanel(
               
               # display selected output
-              plotOutput(
-                plotOutputName,
-                height = "410px"
-              ),
+              plotOutput(plotOutputName),
               
               
               title =
@@ -576,8 +597,51 @@ server <- shinyServer(
   reactives$forecastFreq <- 24
 
   reactives$forecastMethod <- "ets"
-  reactives$forecastHorizon <- 24
   reactives$forecastTrans <- "none"
+  reactives$forecastHorizon <- 24
+
+  # forecast method option
+  output$forecastMethodUI <- renderUI({
+
+    selectInput(
+      label = h5("Set Forecast Method:"),
+      inputId = "forecastMethod",
+      choices = list(
+        "ETS" = "ets",
+        "Auto ARIMA" = "auto.arima",
+        "STL + ETS" = "stlm"
+      ),
+      selected = "ets"
+    )
+
+  })
+
+  # decomposition method option
+  output$forecastHorizonUI <- renderUI({
+
+    numericInput(
+      label = h5("Set Forecast Horizon:"),
+      inputId = "forecastHorizon",
+      value = 24,
+      min = 1
+    )
+
+  })
+
+  # data transformation option
+  output$forecastTransUI <- renderUI({
+
+    selectInput(
+      label = h5("Set Data Transformation Method:"),
+      inputId = "forecastTrans",
+      choices = list(
+        "None" = "none",
+        "Natural Log" = "ln"
+      ),
+      selected = "none"
+    )
+
+  })
 
   # number of frequency option
   output$forecastFreqNUI <- renderUI({
@@ -585,9 +649,13 @@ server <- shinyServer(
     numericInput(
       label = h5("Set Number of Seasonality:"),
       inputId = "forecastFreqN",
-      value = reactives$forecastFreqN,
+      value = 1,
       min = 1,
-      max = 3
+      max =
+        
+        if (reactives$forecastMethod == "stlm") 3
+        else 1
+      
     )
 
   })
@@ -638,94 +706,65 @@ server <- shinyServer(
 
   })
 
-  # forecast method option
-  output$forecastMethodUI <- renderUI({
+  # update input
+  observe({
 
-    selectInput(
-      label = h5("Set Forecast Method:"),
-      inputId = "forecastMethod",
-      choices = list(
-        "ETS" = "ets",
-        "Auto ARIMA" = "auto.arima",
-        "STL + ETS" = "stlm"
-      ),
-      selected = reactives$forecastMethod
-    )
+    # update frequency input
+    if (!is.null(input$forecastFreq1)) {
+      reactives$forecastFreq1 <- input$forecastFreq1
+    }
+    
+    if (!is.null(input$forecastFreq2)) {
+      reactives$forecastFreq2 <- input$forecastFreq2
+    }
+    
+    if (!is.null(input$forecastFreq3)) {
+      reactives$forecastFreq3 <- input$forecastFreq3
+    }
 
-  })
-
-  # decomposition method option
-  output$forecastHorizonUI <- renderUI({
-
-    numericInput(
-      label = h5("Set Forecast Horizon:"),
-      inputId = "forecastHorizon",
-      value = reactives$forecastHorizon,
-      min = 1
-    )
-
-  })
-
-  # data transformation option
-  output$forecastTransUI <- renderUI({
-
-    selectInput(
-      label = h5("Set Data Transformation Method:"),
-      inputId = "forecastTrans",
-      choices = list(
-        "None" = "none",
-        "Natural Log" = "ln"
-      ),
-      selected = reactives$forecastTrans
-    )
-
+    # update selected method
+    if (!is.null(input$forecastMethod)) {
+      reactives$forecastMethod <- input$forecastMethod
+    }
+    
+    # update forecast horizon
+    if (!is.null(input$forecastHorizon)) {
+      reactives$forecastHorizon <- input$forecastHorizon
+    }
+    
+    # update selected transformation
+    if (!is.null(input$forecastTrans)) {
+      reactives$forecastTrans <- input$forecastTrans
+    }
+    
   })
 
   # forecast
   observeEvent(input$forecastAB, {
-
-    # update frequency input
-    req(input$forecastFreq1)
-    reactives$forecastFreq1 <- input$forecastFreq1
-    
-    req(input$forecastFreq2)
-    reactives$forecastFreq2 <- input$forecastFreq2
-    
-    req(input$forecastFreq3)
-    reactives$forecastFreq3 <- input$forecastFreq3
-
-    # update selected method
-    req(input$forecastMethod)
-    reactives$forecastMethod <- input$forecastMethod
-    
-    # update forecast horizon
-    req(input$forecastHorizon)
-    reactives$forecastHorizon <- input$forecastHorizon
-    
-    # update selected transformation
-    req(input$forecastTrans)
-    reactives$forecastTrans <- input$forecastTrans
-    
-  })
-
-  # start decomposition #
-  observeEvent(input$forecastAB, {
     
     # define frequency
     reactives$forecastFreq <-
+        
+      if (reactives$forecastFreqN == 1) {reactives$forecastFreq1}
       
-    if (reactives$forecastFreqN == 1) reactives$forecastFreq1
+      else if (reactives$forecastFreqN == 2) {
+        
+        c(reactives$forecastFreq1,
+          reactives$forecastFreq1 * reactives$forecastFreq2)
+        
+      }
+      
+      else if (reactives$forecastFreqN == 3) {
+        
+        c(reactives$forecastFreq1,
+          reactives$forecastFreq1 * reactives$forecastFreq2,
+          reactives$forecastFreq1 * reactives$forecastFreq2 *
+          reactives$forecastFreq3)
+        
+      }
     
-    else if (reactives$forecastFreqN == 2)
-      c(reactives$forecastFreq1,
-        reactives$forecastFreq1 * reactives$forecastFreq2)
-    
-    else if (reactives$forecastFreqN == 3)
-      c(reactives$forecastFreq1,
-        reactives$forecastFreq1 * reactives$forecastFreq2,
-        reactives$forecastFreq1 * reactives$forecastFreq2 *
-        reactives$forecastFreq3)
-
+    # start forecast #
+  
     # create ts object
     if (reactives$forecastFreqN == 1) {
 
@@ -807,10 +846,7 @@ server <- shinyServer(
     
       box(
         
-        plotOutput(
-          outputId = "forecastPlot",
-          height = "450px"
-        ),
+        plotOutput(outputId = "forecastPlot"),
       
         title = NULL,
         width = NULL
@@ -838,6 +874,7 @@ server <- shinyServer(
       
     )
     
+    # display table UI
     output$forecastTableUI <- renderUI({
       
       box(
