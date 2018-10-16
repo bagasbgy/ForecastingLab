@@ -5,6 +5,7 @@
 library(DT)
 library(forecast)
 library(magrittr)
+library(plotly)
 library(shinydashboard)
 library(sweep)
 library(tidyverse)
@@ -31,11 +32,12 @@ server <- shinyServer(
     # initiate reactive values
     reactives <- reactiveValues(
 
-        initialData = fnb,
-        dataName = "fnb.csv",
+      initialData = fnb,
+      dataNames = list.files("./data/"),
+      dataName = "fnb.csv",
 
-        tsVar = fnb %>% pull(names(fnb)[2]),
-        tsIndex = fnb %>% pull(names(fnb)[1])
+      tsVar = fnb %>% pull(names(fnb)[2]),
+      tsIndex = fnb %>% pull(names(fnb)[1])
 
     )
 
@@ -51,33 +53,40 @@ server <- shinyServer(
 
     })
 
+    # observe upload status
+    observe({
+
+      # check upload status
+      status <- input$dataInput
+
+      # if not null -> copy,
+      if (is.null(status)) return(NULL)
+
+      else if (!is.null(status)) {
+      
+        file.copy(
+          
+          status$datapath,
+          
+          file.path("./data/", status$name)
+          
+        )
+        
+        reactives$dataNames <- list.files("./data/")
+        
+      }
+
+    })
+
     # render available datasets UI
     output$dataNameUI <- renderUI({
 
       selectInput(
         label = h5("Select Dataset:"),
         inputId = "dataName",
-        choices = list.files("data"),
+        choices = reactives$dataNames,
         selected = reactives$dataName
       )
-
-    })
-
-    # observe upload status
-    observeEvent(input$dataInput, {
-
-      # check upload status
-      status <- input$dataInput
-
-      # if not null -> copy,
-      if (!is.null(status)) {
-
-        file.copy(
-          status$datapath,
-          file.path("data", status$name)
-        )
-
-      }
 
     })
 
@@ -173,9 +182,9 @@ server <- shinyServer(
     )
 
     # check plot
-    output$checkPlot <- renderPlot({
+    output$checkPlot <- renderPlotly({
 
-      reactives$initialData %>%
+      p <- reactives$initialData %>%
         rename(
           index = reactives$tsIndexName,
           value = reactives$tsVarName
@@ -185,6 +194,10 @@ server <- shinyServer(
         scale_x_datetime(date_labels = "%Y-%m-%d") +
         labs(title = "", y = "", x = "") +
         theme_bw()
+      
+      p %>% 
+        ggplotly() %>% 
+        return()
 
     })
 
@@ -482,19 +495,23 @@ server <- shinyServer(
           comps, function(comp) {
             
             compTitle <- str_to_title(comp)
-            plotOutputName <- paste0("decomp", compTitle, "Plot")
+            plotlyOutputName <- paste0("decomp", compTitle, "Plot")
             
             # render all component
-            output[[plotOutputName]] <-
+            output[[plotlyOutputName]] <-
               
-              renderPlot({
+              renderPlotly({
                 
-                reactives$decomposed %>%
+                p <- reactives$decomposed %>%
                   filter(key == comp) %>%
                   ggplot(aes(x = index, y = value)) +
                   geom_line() +
                   labs(title = "", y = "", x = "") +
                   theme_bw()
+                
+                p %>% 
+                  ggplotly() %>% 
+                  return()
                 
               })
             
@@ -502,7 +519,7 @@ server <- shinyServer(
             tabPanel(
               
               # display selected output
-              plotOutput(plotOutputName),
+              plotlyOutput(plotlyOutputName),
               
               
               title =
@@ -827,9 +844,9 @@ server <- shinyServer(
     reactives$forecasted <- forecasted
 
     # display plot
-    output$forecastPlot <- renderPlot({
+    output$forecastPlot <- renderPlotly({
       
-      reactives$forecasted %>%
+      p <- reactives$forecasted %>%
         ggplot(aes(x = index, y = value, colour = factor(key))) +
         geom_line() +
         labs(title = "", y = "", x = "", colour = "") +
@@ -839,6 +856,10 @@ server <- shinyServer(
           guide = FALSE
         )
       
+      p %>% 
+        ggplotly() %>% 
+        return()
+      
     })
     
     # display plot UI
@@ -846,7 +867,7 @@ server <- shinyServer(
     
       box(
         
-        plotOutput(outputId = "forecastPlot"),
+        plotlyOutput(outputId = "forecastPlot"),
       
         title = NULL,
         width = NULL
