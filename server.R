@@ -250,7 +250,6 @@ server <- shinyServer(function(input, output, session) {
       max =
         if (reactives$decompMethod == "stl") 3
         else 1
-
     )
 
   })
