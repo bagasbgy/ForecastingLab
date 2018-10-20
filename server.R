@@ -61,17 +61,14 @@ server <- shinyServer(function(input, output, session) {
     if (is.null(status)) return(NULL)
 
     else if (!is.null(status)) {
-    
+
       file.copy(
-        
         status$datapath,
-        
         file.path("./data/", status$name)
-        
       )
-      
+
       reactives$dataNames <- list.files("./data/")
-      
+
     }
 
   })
@@ -136,9 +133,9 @@ server <- shinyServer(function(input, output, session) {
 
     # update ts variable
     if (!is.null(input$tsVarName)) {
-      
+
       reactives$tsVarName <- input$tsVarName
-      
+
     }
 
     reactives$tsVar <-
@@ -150,9 +147,9 @@ server <- shinyServer(function(input, output, session) {
 
     # store ts index
     if (!is.null(input$tsIndexName)) {
-      
+
       reactives$tsIndexName <- input$tsIndexName
-    
+
     }
 
     reactives$tsIndex <-
@@ -192,9 +189,9 @@ server <- shinyServer(function(input, output, session) {
       scale_x_datetime(date_labels = "%Y-%m-%d") +
       labs(title = "", y = "", x = "") +
       theme_bw()
-    
-    p %>% 
-      ggplotly() %>% 
+
+    p %>%
+      ggplotly() %>%
       return()
 
   })
@@ -211,7 +208,7 @@ server <- shinyServer(function(input, output, session) {
 
   reactives$decompMethod <- "classic"
   reactives$decompTrans <- "none"
-  
+
   # decomposition method option
   output$decompMethodUI <- renderUI({
 
@@ -253,7 +250,7 @@ server <- shinyServer(function(input, output, session) {
       max =
         if (reactives$decompMethod == "stl") 3
         else 1
-      
+
     )
 
   })
@@ -262,9 +259,9 @@ server <- shinyServer(function(input, output, session) {
   observeEvent(input$decompFreqN, {
 
     if (!is.null(input$decompFreqN)) {
-      
+
       reactives$decompFreqN <- input$decompFreqN
-      
+
     }
 
   })
@@ -308,44 +305,44 @@ server <- shinyServer(function(input, output, session) {
 
   # update decomposition input
   observe({
-    
+
     # update selected method
     if (!is.null(input$decompMethod)) {
-      
+
       reactives$decompMethod <- input$decompMethod
-      
+
     }
 
     # update selected transformation
     if (!is.null(input$decompTrans)) {
-      
+
       reactives$decompTrans <- input$decompTrans
-      
+
     }
 
     # update frequency input
     if (!is.null(input$decompFreq1)) {
-      
+
       reactives$decompFreq1 <- input$decompFreq1
-    
+
     }
-    
-    
+
+
     if (!is.null(input$decompFreq2)) {
-    
+
       reactives$decompFreq2 <- input$decompFreq2
-      
+
     }
-    
-    
+
+
     if (!is.null(input$decompFreq3)) {
-    
+
       reactives$decompFreq3 <- input$decompFreq3
-      
+
     }
-    
+
   })
-  
+
   # decomposition
   observeEvent(input$decompAB, {
 
@@ -477,49 +474,49 @@ server <- shinyServer(function(input, output, session) {
 
     # store final decomposition result
     reactives$decomposed <- decomposed
-    
-    
+
+
     # display plot
     output$decompPlotUI <- renderUI({
-      
+
       # names of all components
       comps <- reactives$decomposed %>%
         pull(key) %>% as.factor() %>% levels()
-      
+
       # full dynamic plot tabs
       decompPlotTabs <- lapply(
-        
+
         # generate plot and tab panels
         comps, function(comp) {
-          
+
           compTitle <- str_to_title(comp)
           plotlyOutputName <- paste0("decomp", compTitle, "Plot")
-          
+
           # render all component
           output[[plotlyOutputName]] <-
-            
+
             renderPlotly({
-              
+
               p <- reactives$decomposed %>%
                 filter(key == comp) %>%
                 ggplot(aes(x = index, y = value)) +
                 geom_line() +
                 labs(title = "", y = "", x = "") +
                 theme_bw()
-              
-              p %>% 
-                ggplotly() %>% 
+
+              p %>%
+                ggplotly() %>%
                 return()
-              
+
             })
-          
+
           # tab panel
           tabPanel(
-            
+
             # display selected output
             plotlyOutput(plotlyOutputName),
-            
-            
+
+
             title =
             if (comp == "season")
                 paste("Seasonal Component")
@@ -530,26 +527,26 @@ server <- shinyServer(function(input, output, session) {
             else if (comp == "season3")
               paste("Third Seasonal Component")
             else paste(compTitle, "Component"),
-            
+
             width = NULL
-            
+
           ) %>%
-            
+
             return()
-          
+
         }
-        
+
       )
-      
+
       # return dynamic tabs
       do.call(tabBox, c(decompPlotTabs, width = NA)) %>%
         return()
-      
+
     })
-    
+
     # display table
     output$decompTable <- renderDataTable(
-      
+
       # decomposition result
       reactives$decomposed %>%
         mutate_if(
@@ -557,36 +554,36 @@ server <- shinyServer(function(input, output, session) {
           funs(format(round(., 2), nsmall = 2))
         ) %>%
         spread(key = key, value = value),
-      
+
       # data table options
       options = list(
         pageLength = 5,
         lengthMenu = 5
       )
-      
+
     )
 
     # render display table UI
     output$decompTableUI <- renderUI({
-      
+
       box(
-        
+
         dataTableOutput(outputId = "decompTable"),
-        
+
         title = NULL,
         width = NULL
-        
+
       )
-      
+
     })
-      
+
     # download handler for decomposition result
     output$decompDownload <- downloadHandler(
-      
+
       filename = function() {
         paste("decompositionResult.csv", sep = "")
       },
-      
+
       content = function(file) {
         reactives$decomposed %>%
           mutate_if(
@@ -667,10 +664,10 @@ server <- shinyServer(function(input, output, session) {
       value = 1,
       min = 1,
       max =
-        
+
         if (reactives$forecastMethod == "stlm") 3
         else 1
-      
+
     )
 
   })
@@ -728,11 +725,11 @@ server <- shinyServer(function(input, output, session) {
     if (!is.null(input$forecastFreq1)) {
       reactives$forecastFreq1 <- input$forecastFreq1
     }
-    
+
     if (!is.null(input$forecastFreq2)) {
       reactives$forecastFreq2 <- input$forecastFreq2
     }
-    
+
     if (!is.null(input$forecastFreq3)) {
       reactives$forecastFreq3 <- input$forecastFreq3
     }
@@ -741,45 +738,45 @@ server <- shinyServer(function(input, output, session) {
     if (!is.null(input$forecastMethod)) {
       reactives$forecastMethod <- input$forecastMethod
     }
-    
+
     # update forecast horizon
     if (!is.null(input$forecastHorizon)) {
       reactives$forecastHorizon <- input$forecastHorizon
     }
-    
+
     # update selected transformation
     if (!is.null(input$forecastTrans)) {
       reactives$forecastTrans <- input$forecastTrans
     }
-    
+
   })
 
   # forecast
   observeEvent(input$forecastAB, {
-    
+
     # define frequency
     reactives$forecastFreq <-
-        
+
       if (reactives$forecastFreqN == 1) {reactives$forecastFreq1}
-      
+
       else if (reactives$forecastFreqN == 2) {
-        
+
         c(reactives$forecastFreq1,
           reactives$forecastFreq1 * reactives$forecastFreq2)
-        
+
       }
-      
+
       else if (reactives$forecastFreqN == 3) {
-        
+
         c(reactives$forecastFreq1,
           reactives$forecastFreq1 * reactives$forecastFreq2,
           reactives$forecastFreq1 * reactives$forecastFreq2 *
           reactives$forecastFreq3)
-        
+
       }
-    
+
     # start forecast #
-  
+
     # create ts object
     if (reactives$forecastFreqN == 1) {
 
@@ -843,7 +840,7 @@ server <- shinyServer(function(input, output, session) {
 
     # display plot
     output$forecastPlot <- renderPlotly({
-      
+
       p <- reactives$forecasted %>%
         ggplot(aes(x = index, y = value, colour = factor(key))) +
         geom_line() +
@@ -853,30 +850,30 @@ server <- shinyServer(function(input, output, session) {
           values = c("black", "blue"),
           guide = FALSE
         )
-      
-      p %>% 
-        ggplotly() %>% 
+
+      p %>%
+        ggplotly() %>%
         return()
-      
+
     })
-    
+
     # display plot UI
     output$forecastPlotUI <- renderUI({
-    
+
       box(
-        
+
         plotlyOutput(outputId = "forecastPlot"),
-      
+
         title = NULL,
         width = NULL
-        
+
       )
-      
+
     })
-    
+
     # display table
     output$forecastTable <- renderDataTable(
-      
+
       # decomposition result
       reactives$forecasted %>%
         mutate_if(
@@ -884,36 +881,36 @@ server <- shinyServer(function(input, output, session) {
           funs(format(round(., 2), nsmall = 2))
         ) %>%
         spread(key = key, value = value),
-      
+
       # data table options
       options = list(
         pageLength = 5,
         lengthMenu = 5
       )
-      
+
     )
-    
+
     # display table UI
     output$forecastTableUI <- renderUI({
-      
+
       box(
-        
+
         dataTableOutput(outputId = "forecastTable"),
-        
+
         title = NULL,
         width = NULL
-        
+
       )
-      
+
     })
 
     # download handler for forecast result
     output$forecastDownload <- downloadHandler(
-      
+
       filename = function() {
         paste("forecastResult.csv", sep = "")
       },
-      
+
       content = function(file) {
         reactives$forecasted %>%
           mutate_if(
@@ -923,21 +920,21 @@ server <- shinyServer(function(input, output, session) {
           spread(key = key, value = value) %>%
           write_csv(file)
       }
-      
+
     )
-    
+
   }, ignoreInit = TRUE)
 
   # end of server
   #--------------------
-  
+
   # clear all uploaded file
   session$onSessionEnded(function() {
-    
+
     file.remove(
       paste0("./data/", list.files("data") %>% .[. != "fnb.csv"])
     )
-    
+
   })
 
 })
